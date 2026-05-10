@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freight Demand Intelligence</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #020617;
+            --bg-grad: linear-gradient(135deg, #020617 0%, #050a15 50%, #0a1020 100%);
+            --card-bg: rgba(15, 23, 42, 0.6);
+            --card-border: #FFD700;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #6366f1;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background: var(--bg-grad);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        .screen {
+            min-height: 100vh;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 2.625rem;
+            font-weight: 700;
+            color: #FFD700;
+        }
+
+        .subtitle-names {
+            font-size: 1.250rem;
+            font-weight: 600;
+            color: #fde68a;
+            margin-top: 0.5rem;
+        }
+
+        .subtitle-guide {
+            font-size: 1.000rem;
+            font-weight: 400;
+            color: #cbd5e1;
+            margin-top: 0.25rem;
+        }
+
+        .datetime-panel {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            background: var(--card-bg);
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .analog-clock {
+            width: 70px;
+            height: 70px;
+            border: 2px solid #FFD700;
+            border-radius: 50%;
+            position: relative;
+            margin: 0 auto 1rem auto;
+        }
+
+        .analog-clock::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background: #FFD700;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom;
+            background: #FFD700;
+            border-radius: 4px;
+            z-index: 5;
+        }
+
+        .hour-hand {
+            width: 4px;
+            height: 17px;
+            margin-left: -2px;
+        }
+
+        .min-hand {
+            width: 3px;
+            height: 25px;
+            margin-left: -1.5px;
+        }
+
+        .sec-hand {
+            width: 2px;
+            height: 30px;
+            background: #FFD700;
+            margin-left: -1px;
+        }
+
+        .digital-time {
+            font-family: monospace;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+            text-align: center;
+        }
+
+        .current-date {
+            font-size: 1rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .glass {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-title {
+            font-size: 0.875rem;
+            color: #FFD700;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .kpi-val {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            flex: 1;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-area {
+            position: relative;
+            height: 180px;
+            width: 100%;
+        }
+
+        .decision-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .insight-item {
+            padding: 1rem;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--accent);
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .insight-item.positive {
+            border-color: var(--success);
+        }
+
+        .insight-item.negative {
+            border-color: var(--danger);
+        }
+
+        .insight-item.warning {
+            border-color: var(--warning);
+        }
+
+        .summary-box {
+            font-size: 1.125rem;
+            line-height: 1.6;
+            color: #e2e8f0;
+            text-align: center;
+        }
+
+        .screen-2 {
+            min-height: 100vh;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        select,
+        button {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        button.primary {
+            background: var(--accent);
+            font-weight: 600;
+            border: none;
+        }
+
+        button.primary:hover {
+            background: #4f46e5;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="screen">
+        <div class="header">
+            <div class="title">Frieght Demand Intelligence Dashboard</div>
+            <div class="subtitle-names">Bharath M, Chethana R, Deepthi C, Manasa V</div>
+            <div class="subtitle-guide">Under the guidance of Mrs. Kalpana B Lathi, Assistant Data Analyst, Supervisor
+                and Guide, Contriver</div>
+        </div>
+
+        <div class="top-row" style="display: flex; gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="glass" style="flex: 3; display: flex; flex-direction: column; justify-content: center;">
+                <div class="kpi-title" style="margin-bottom: 1rem;">Predictive Summary</div>
+                <div class="summary-box" id="predictive-summary"
+                    style="text-align: left; font-size: 1.125rem; color: #f8fafc;">Loading predictive summary...</div>
+            </div>
+            <div class="glass"
+                style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div class="datetime-panel"
+                    style="background: transparent; border: none; padding: 0; backdrop-filter: none; box-shadow: none; flex-direction: column; gap: 0;">
+                    <div class="analog-clock">
+                        <div class="hand hour-hand" id="hrHand"></div>
+                        <div class="hand min-hand" id="minHand"></div>
+                        <div class="hand sec-hand" id="secHand"></div>
+                    </div>
+                    <div>
+                        <div class="digital-time" id="digitalTime">00:00:00</div>
+                        <div class="current-date" id="currentDate">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="glass">
+                <div class="kpi-title">Next Day Demand</div>
+                <div class="kpi-val" id="kpi-next-day">-- Tons / Day</div>
+            </div>
+            <div class="glass">
+                <div class="kpi-title">Next 3-Day Demand</div>
+                <div class="kpi-val" id="kpi-next-3-days" style="color: var(--accent)">-- Tons / Day</div>
+            </div>
+            <div class="glass">
+                <div class="kpi-title">Risk Indicator</div>
+                <div class="kpi-val" id="kpi-risk" style="color: var(--warning)">Moderate</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="glass">
+                <div class="kpi-title" style="margin-bottom: 1rem;">Demand Forecast</div>
+                <div class="chart-area"><canvas id="mainTrendChart"></canvas></div>
+            </div>
+            <div class="glass">
+                <div class="kpi-title" id="region-title" style="margin-bottom: 1rem;">Region Breakdown</div>
+                <div class="chart-area"><canvas id="regionChart"></canvas></div>
+            </div>
+            <div class="glass">
+                <div class="kpi-title" style="margin-bottom: 1rem;">Cargo Demand Distribution</div>
+                <div class="chart-area"><canvas id="cargoChart"></canvas></div>
+            </div>
+            <div class="glass">
+                <div class="kpi-title" style="margin-bottom: 1rem;">Weather Impact Factor</div>
+                <div class="chart-area"><canvas id="weatherChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="main-content" style="grid-template-columns: 1fr; min-height: unset;">
+            <div class="glass decision-panel">
+                <div class="kpi-title">Decision Insight Panel</div>
+                <div id="insight-1" class="insight-item">Analyzing recent volume...</div>
+                <div id="insight-2" class="insight-item">Evaluating capacity...</div>
+                <div id="insight-3" class="insight-item">Assessing risk factors...</div>
+            </div>
+        </div>
+
+        <div class="glass" style="margin-bottom: 2rem;">
+            <div class="kpi-title" style="margin-bottom: 1rem;">Prediction Controls</div>
+            <div class="filters" style="flex-wrap: wrap; margin-bottom: 0;">
+                <select id="ctrl-weather">
+                    <option value="">Select Weather...</option>
+                    <option value="Clear">Clear</option>
+                    <option value="Rain">Rain</option>
+                    <option value="Storm">Storm</option>
+                    <option value="Fog">Fog</option>
+                </select>
+
+                <input type="date" id="ctrl-start-date"
+                    style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--card-border); color: var(--text-main); padding: 0.75rem 1.25rem; border-radius: 8px; font-size: 1rem; outline: none;">
+
+                <select id="ctrl-category">
+                    <option value="">Select Category...</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="FMCG">FMCG</option>
+                    <option value="Agriculture">Agriculture</option>
+                    <option value="Pharma">Pharma</option>
+                    <option value="Automobile">Automobile</option>
+                </select>
+
+                <select id="ctrl-region">
+                    <option value="">Select Region...</option>
+                    <option value="North">North</option>
+                    <option value="South">South</option>
+                    <option value="East">East</option>
+                    <option value="West">West</option>
+                </select>
+
+                <button class="primary" onclick="handlePredict()">Predict</button>
+                <button onclick="handleReset()">Reset</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        const gridConfig = { color: 'rgba(255, 255, 255, 0.05)' };
+
+        function updateClock() {
+            const now = new Date();
+            const h = now.getHours(); const m = now.getMinutes(); const s = now.getSeconds();
+            document.getElementById('hrHand').style.transform = `rotate(${(h % 12) * 30 + m * 0.5}deg)`;
+            document.getElementById('minHand').style.transform = `rotate(${m * 6 + s * 0.1}deg)`;
+            document.getElementById('secHand').style.transform = `rotate(${s * 6}deg)`;
+            document.getElementById('digitalTime').innerText = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('currentDate').innerText = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+        setInterval(updateClock, 1000); updateClock();
+
+        const mainCtx = document.getElementById('mainTrendChart').getContext('2d');
+        const grad = mainCtx.createLinearGradient(0, 0, 0, 400);
+        grad.addColorStop(0, 'rgba(99, 102, 241, 0.5)'); grad.addColorStop(1, 'rgba(99, 102, 241, 0)');
+
+        const valueLabelPlugin = {
+            id: 'valueLabelPlugin',
+            afterDatasetsDraw(chart, args, options) {
+                const { ctx } = chart;
+                ctx.save();
+                ctx.font = "bold 12px Inter";
+                ctx.fillStyle = "#FFD700";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    if (meta.hidden) return;
+
+                    meta.data.forEach((element, index) => {
+                        const val = dataset.data[index];
+                        const text = typeof val === 'number' ? val.toFixed(3) : val;
+
+                        if (chart.config.type === 'pie' || chart.config.type === 'doughnut') {
+                            const pos = element.tooltipPosition();
+                            ctx.fillText(text, pos.x, pos.y);
+                        } else if (chart.config.type === 'radar') {
+                            const pos = element.tooltipPosition();
+                            ctx.fillText(text, pos.x, pos.y - 10);
+                        } else {
+                            ctx.fillText(text, element.x, element.y - 15);
+                        }
+                    });
+                });
+                ctx.restore();
+            }
+        };
+
+        const mainChart = new Chart(mainCtx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Predicted Volume', data: [], borderColor: '#6366f1', backgroundColor: grad, fill: true, tension: 0.4, borderWidth: 3, pointRadius: 4 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: gridConfig } } },
+            plugins: [valueLabelPlugin]
+        });
+
+        const baseRegionPct = [0.296, 0.247, 0.202, 0.255];
+        const baseCargoPct = [0.448, 0.302, 0.146, 0.104];
+        const baseWeatherScore = [0.785, 0.412, 0.198, 0.493];
+
+        const regionChart = new Chart(document.getElementById('regionChart'), { type: 'doughnut', data: { labels: ['North', 'South', 'East', 'West'], datasets: [{ data: [], backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ec4899'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }, plugins: [valueLabelPlugin] });
+        const cargoChart = new Chart(document.getElementById('cargoChart'), { type: 'pie', data: { labels: ['Electronics', 'FMCG', 'Pharma', 'Auto'], datasets: [{ data: [], backgroundColor: ['#ec4899', '#6366f1', '#10b981', '#f59e0b'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }, plugins: [valueLabelPlugin] });
+        const weatherChart = new Chart(document.getElementById('weatherChart'), { type: 'radar', data: { labels: ['Clear', 'Rain', 'Storm', 'Fog'], datasets: [{ data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false } } } }, plugins: [valueLabelPlugin] });
+
+        let currentForecast = [];
+        let latestSummary = null;
+
+        function updateSupportingCharts(filteredForecast) {
+            if (!filteredForecast || !filteredForecast.length) return;
+            const totalDemand = filteredForecast[0];
+
+            const region = document.getElementById('ctrl-region').value;
+            const regionTitleEl = document.getElementById('region-title');
+
+            const cargoVals = baseCargoPct.map(p => totalDemand * p);
+            const weatherVals = baseWeatherScore.map(p => totalDemand * p);
+
+            if (region) {
+                if (regionTitleEl) regionTitleEl.innerText = `Cargo Distribution - ${region} Region`;
+                const cargoLabels = ['Electronics', 'FMCG', 'Pharma', 'Auto'];
+                regionChart.data.labels = cargoVals.map((v, i) => `${cargoLabels[i]}: ${v.toFixed(2)}t (${(baseCargoPct[i] * 100).toFixed(1)}%)`);
+                regionChart.data.datasets[0].data = cargoVals;
+            } else {
+                if (regionTitleEl) regionTitleEl.innerText = "Region Breakdown";
+                const regionVals = baseRegionPct.map(p => totalDemand * p);
+                const regionLabels = ['North', 'South', 'East', 'West'];
+                regionChart.data.labels = regionVals.map((v, i) => `${regionLabels[i]}: ${v.toFixed(2)}t (${(baseRegionPct[i] * 100).toFixed(1)}%)`);
+                regionChart.data.datasets[0].data = regionVals;
+            }
+            regionChart.update('none');
+
+            const cargoLabels = ['Electronics', 'FMCG', 'Pharma', 'Auto'];
+            cargoChart.data.labels = cargoVals.map((v, i) => `${cargoLabels[i]}: ${v.toFixed(2)}t (${(baseCargoPct[i] * 100).toFixed(1)}%)`);
+            cargoChart.data.datasets[0].data = cargoVals;
+            cargoChart.update('none');
+
+            weatherChart.data.datasets[0].data = weatherVals;
+            weatherChart.update('none');
+        }
+
+        async function fetchInitialData() {
+            try {
+                const res = await fetch("http://127.0.0.1:5000/predict");
+                if (!res.ok) throw new Error("Network error");
+                const data = await res.json();
+
+                if (data.supporting_charts) {
+                    baseRegionPct.splice(0, baseRegionPct.length, ...data.supporting_charts.region);
+                    baseCargoPct.splice(0, baseCargoPct.length, ...data.supporting_charts.cargo);
+                    baseWeatherScore.splice(0, baseWeatherScore.length, ...data.supporting_charts.weather);
+                }
+
+                currentForecast = [data.next_day, ...data.next_3_days];
+
+                const i2 = document.getElementById('insight-2');
+                const i3 = document.getElementById('insight-3');
+                if (i2) {
+                    i2.className = 'insight-item warning';
+                    i2.innerText = "Capacity status monitored → Adjust regional hubs accordingly.";
+                }
+                if (i3) {
+                    i3.className = 'insight-item warning';
+                    i3.innerText = "Weather risk tracked → Keep alternate routes ready for high-risk zones.";
+                }
+
+                updateDashboard();
+            } catch (e) { }
+        }
+
+        async function handlePredict() {
+            const weather = document.getElementById('ctrl-weather').value;
+            const startDate = document.getElementById('ctrl-start-date').value;
+            const category = document.getElementById('ctrl-category').value;
+            const region = document.getElementById('ctrl-region').value;
+
+            const payload = {};
+            if (weather) payload.Weather = weather;
+            if (category) payload.Cargo_Type = category;
+            if (region) payload.Origin = region;
+            if (startDate) payload.Start_Date = startDate;
+
+            console.log("Sending filters:", payload);
+
+            try {
+                const res = await fetch("http://127.0.0.1:5000/predict", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                console.log("Prediction response:", data);
+
+                currentForecast = [data.next_day, ...data.next_3_days];
+                if (data.summary) latestSummary = data.summary;
+
+                if (data.supporting_charts) {
+                    baseRegionPct.splice(0, baseRegionPct.length, ...data.supporting_charts.region);
+                    baseCargoPct.splice(0, baseCargoPct.length, ...data.supporting_charts.cargo);
+                    baseWeatherScore.splice(0, baseWeatherScore.length, ...data.supporting_charts.weather);
+                }
+
+                updateDashboard();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function handleReset() {
+            document.getElementById('ctrl-weather').value = "";
+            document.getElementById('ctrl-start-date').value = "";
+            document.getElementById('ctrl-category').value = "";
+            document.getElementById('ctrl-region').value = "";
+            latestSummary = null;
+            try {
+                const res = await fetch("http://127.0.0.1:5000/predict");
+                const data = await res.json();
+                currentForecast = [data.next_day, ...data.next_3_days];
+
+                if (data.supporting_charts) {
+                    baseRegionPct.splice(0, baseRegionPct.length, ...data.supporting_charts.region);
+                    baseCargoPct.splice(0, baseCargoPct.length, ...data.supporting_charts.cargo);
+                    baseWeatherScore.splice(0, baseWeatherScore.length, ...data.supporting_charts.weather);
+                }
+
+                updateDashboard();
+            } catch (e) { }
+        }
+
+        function getFilterMultiplier() {
+            let multiplier = 1.0;
+            const category = document.getElementById('ctrl-category').value;
+            const region = document.getElementById('ctrl-region').value;
+            const weather = document.getElementById('ctrl-weather').value;
+
+            if (category) {
+                const idx = ['Electronics', 'FMCG', 'Pharma', 'Automobile'].indexOf(category);
+                if (idx !== -1) multiplier *= baseCargoPct[idx];
+            }
+            if (region) {
+                const idx = ['North', 'South', 'East', 'West'].indexOf(region);
+                if (idx !== -1) multiplier *= baseRegionPct[idx];
+            }
+            if (weather) {
+                const idx = ['Clear', 'Rain', 'Storm', 'Fog'].indexOf(weather);
+                if (idx !== -1) multiplier *= baseWeatherScore[idx];
+            }
+            return multiplier;
+        }
+
+        function updateDashboard() {
+            if (!currentForecast.length) return;
+            const multiplier = getFilterMultiplier();
+            const filteredForecast = currentForecast.map(v => v * multiplier);
+
+            const startDateStr = document.getElementById('ctrl-start-date').value;
+            let baseDate = new Date();
+            let startOffset = 1;
+
+            if (startDateStr) {
+                const parts = startDateStr.split('-');
+                baseDate = new Date(parts[0], parts[1] - 1, parts[2]);
+                startOffset = 0;
+            }
+
+            let futureLabels = [];
+            for (let i = 0; i < filteredForecast.length; i++) {
+                const d = new Date(baseDate);
+                d.setDate(d.getDate() + startOffset + i);
+                futureLabels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            }
+            mainChart.data.labels = futureLabels;
+
+            const next_day = filteredForecast[0];
+            const avg3days = (filteredForecast[0] + filteredForecast[1] + filteredForecast[2]) / 3;
+
+            document.getElementById('kpi-next-day').innerText = next_day.toFixed(3) + " Tons / Day";
+            document.getElementById('kpi-next-3-days').innerText = avg3days.toFixed(3) + " Tons / Day";
+
+            updateDecisionAndSummary(filteredForecast);
+
+            if (currentForecast.length !== 5) {
+                console.error("Forecast length incorrect:", currentForecast);
+            }
+
+            const minVal = Math.min(...filteredForecast);
+            const maxVal = Math.max(...filteredForecast);
+            let padding = (maxVal - minVal) * 0.2;
+            if (padding < 1.0) padding = 1.0;
+
+            mainChart.options.scales.y.suggestedMin = Math.max(0, minVal - padding);
+            mainChart.options.scales.y.suggestedMax = maxVal + padding;
+
+            mainChart.data.datasets[0].data = [...filteredForecast];
+            mainChart.update('none');
+
+            updateSupportingCharts(filteredForecast);
+        }
+
+        function updateDecisionAndSummary(filteredForecast) {
+            const i1 = document.getElementById('insight-1');
+            const sum = document.getElementById('predictive-summary');
+
+            const diff = filteredForecast[2] - filteredForecast[0];
+
+            if (diff > 1.0) {
+                i1.className = 'insight-item positive';
+                i1.innerText = "Demand rising → Increase fleet allocation";
+            } else if (diff < -1.0) {
+                i1.className = 'insight-item negative';
+                i1.innerText = "Demand dropping → Optimize cost and routes";
+            } else {
+                i1.className = 'insight-item warning';
+                i1.innerText = "Demand stable → Maintain current operations";
+            }
+
+            let maxVal = -Infinity;
+            let peakIdx = 0;
+            for (let i = 0; i < filteredForecast.length; i++) {
+                if (filteredForecast[i] > maxVal) {
+                    maxVal = filteredForecast[i];
+                    peakIdx = i;
+                }
+            }
+
+            const peakDate = mainChart.data.labels[peakIdx];
+
+            let subject = "Demand";
+            const category = document.getElementById('ctrl-category').value;
+            const region = document.getElementById('ctrl-region').value;
+            const weather = document.getElementById('ctrl-weather').value;
+
+            let filters = [];
+            if (region) filters.push(region);
+            if (weather) filters.push(weather + " weather");
+            if (category) filters.push(category);
+
+            if (filters.length > 0) {
+                subject = filters.join(" ") + " demand";
+            }
+
+            let summaryText = "";
+
+            if (peakIdx === filteredForecast.length - 1) {
+                summaryText = `${subject} is expected to steadily increase over the forecast period, reaching its peak around ${peakDate} with no immediate decline, indicating a strong need for expanded logistics capacity.`;
+            } else if (peakIdx === 0) {
+                summaryText = `${subject} starts high and is expected to consistently decline after its initial peak around ${peakDate}, suggesting an opportunity for businesses to optimize routing and reduce idle fleet costs.`;
+            } else if (peakIdx < 2) {
+                summaryText = `${subject} is expected to rise initially, peaking around ${peakDate}, followed by a steady downward stabilization, highlighting a clear need to rapidly mobilize resources before reducing active capacity.`;
+            } else {
+                summaryText = `${subject} is expected to gradually rise over the coming days, reaching its peak around ${peakDate}, followed by a slight decline, indicating a need for optimized resource allocation.`;
+            }
+
+            summaryText = summaryText.charAt(0).toUpperCase() + summaryText.slice(1);
+
+            sum.innerText = summaryText;
+        }
+
+        fetchInitialData();
+    </script>
+</body>
+
+</html>
